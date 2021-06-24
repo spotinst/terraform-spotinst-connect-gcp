@@ -1,4 +1,7 @@
-variable "name" {}
-variable "service_account_name" {}
-variable "project" {}
+variable "project" {
+  type        = string
+  description = "Name of the project to connect to Spot"
+}
+
+
 

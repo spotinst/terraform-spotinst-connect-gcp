@@ -1,10 +1,8 @@
 #Call the spot module to create a Spot account and link project
 module "spot_account" {
     source = "../"
-    #Name of the Spot Account
-    name = "terraform-gcp"
-    #Name of the service Account
-    service_account_name = "spot-terraform"
+
+    # GCP Project you would like to connect to Spot
     project = "example"
 }
 
