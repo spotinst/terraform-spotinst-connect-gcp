@@ -34,8 +34,8 @@ resource "google_service_account" "spotserviceaccount" {
 	    # Without this set-cloud-credentials fails 
 	    command = "sleep 10"
 	}
-	account_id   = "SpotServiceAccount${random_id.role.hex}"
-	display_name = "SpotServiceAccount${random_id.role.hex}"
+	account_id   = "spotserviceaccount${random_id.role.hex}"
+	display_name = "spotserviceaccount${random_id.role.hex}"
 	description = "Service Account for Spot.io"
 	project = var.project
 }
