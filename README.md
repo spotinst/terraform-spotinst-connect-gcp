@@ -18,7 +18,7 @@ module "spotinst-connect-gcp-project" {
   spot_organization_id = "demo-org-1234567890"
 }
 output "spot_account_id" {
-    value = module.spotinst-connect-gcp-project.spot_acct.id
+    value = module.spotinst-connect-gcp-project.spot_account_id
 }
 ```
 
