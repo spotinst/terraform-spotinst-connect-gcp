@@ -1,46 +1,37 @@
 # Terraform GCP Examples for Spot.io
 
 ## Introduction
-Example Terraform for Spot.io
-
-## Example
-```hcl
-#Call the spot module to create a Spot account and link project to the platform
-module "gcp_connect_project1" {
-    source = "stevenfeltner/gcp-connect/spotinst"
-    project = "project1"
-}
-#Connect a second project
-module "gcp_connect_project2" {
-  source = "stevenfeltner/gcp-connect/spotinst"
-  project = "project2"
-}
-output "spot_account_id" {
-    value = module.gcp_connect_project1.spot_account_id
-}
-output "spot_account_id2" {
-  value = module.gcp_connect_project2.spot_account_id
-}
-
-```
-
-## Details
-The module will aid in automatically connecting your GCP project to Spot via terraform. This will also leverage a python script to create the Spot account within your Spot Organization and attach the GCP service account credential.
+The module will aid in automatically connecting your GCP project to Spot account via terraform.
 
 ### Pre-Reqs
-* Spot Organization Admin API token. This is required to be added as an environment variable stored in ```SPOTINST_TOKEN```.  
-* Python 3 installed. 
+* Spot Organization Admin API token.
+
+## Example
+## Usage
+```hcl
+#Call the spot module to create a Spot account and link project to the platform
+module "spotinst-connect-gcp-project" {
+  source               = "spotinst/connect-gcp/spotinst"
+  project              = "demo-labs"
+  name                 = "demo-acct_123456"
+  spotinst_token       = "redacted"
+  spot_organization_id = "demo-org-1234567890"
+}
+output "spot_account_id" {
+    value = module.spotinst_account.spot_acct.id
+}
+```
 
 ### Run
 This terraform module will do the following:
 
 On Apply:
-* Create GCP Service Account
-* Create GCP Service Account Key
-* Create GCP Project Role
-* Create Spot Account within Spot Organization
-* Assign Project Role to Service Account
-* Provide GCP Service Account Key to newly created Spot Account
+* Create Spot Account within Spot Organization.
+* Create GCP Service Account.
+* Create GCP Service Account Key.
+* Create GCP Project Role.
+* Assign Project Role to Service Account.
+* Provide GCP Service Account Key to newly created Spot Account.
 
 On Destroy:
-Remove all above resources including deleting the Spot Account
+* Remove all above resources including deleting the Spot Account.
