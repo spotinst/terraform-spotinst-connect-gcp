@@ -7,6 +7,7 @@ resource "spotinst_account" "spot_acct" {
     name=local.name
 }
 
+# Allows management of a customized Cloud IAM project role.
 resource "google_project_iam_custom_role" "SpotRole" {
     role_id     = var.role_id == null ? "SpotRole${replace(spotinst_account.spot_acct.id, "-", "")}" : var.role_id
     title       = var.role_title == null ? "SpotRole${replace(spotinst_account.spot_acct.id, "-", "")}" : var.role_title
@@ -15,6 +16,7 @@ resource "google_project_iam_custom_role" "SpotRole" {
     permissions = var.role_permissions
 }
 
+# Allows management of a Google Cloud service account.
 resource "google_service_account" "spotserviceaccount" {
     depends_on = [spotinst_account.spot_acct]
     provisioner "local-exec" {
@@ -28,10 +30,12 @@ resource "google_service_account" "spotserviceaccount" {
     project      = var.project
 }
 
+# Creates and manages service account keys, which allow the use of a service account with Google Cloud.
 resource "google_service_account_key" "key" {
     service_account_id = google_service_account.spotserviceaccount.name
 }
 
+# Authoritative for a given role. Updates the IAM policy to grant a role to a list of members. Other roles within the IAM policy for the project are preserved.
 resource "google_project_iam_binding" "spot-account-iam" {
     project = var.project
     role    = google_project_iam_custom_role.SpotRole.name
@@ -40,6 +44,7 @@ resource "google_project_iam_binding" "spot-account-iam" {
     ]
 }
 
+# Authoritative for a given role. Updates the IAM policy to grant a role to a list of members. Other roles within the IAM policy for the project are preserved.
 resource "google_project_iam_binding" "service-account-user-iam" {
     project = var.project
     role    = "roles/iam.serviceAccountUser"
@@ -47,7 +52,7 @@ resource "google_project_iam_binding" "service-account-user-iam" {
         google_service_account.spotserviceaccount.member
     ]
 }
-
+# Link a Spot account to a GCP Cloud account.
 resource "spotinst_credentials_gcp" "gcp_connect" {
     provisioner "local-exec" {
         # Without this set-cloud-credentials fails
