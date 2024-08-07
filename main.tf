@@ -1,92 +1,80 @@
-terraform {
-    required_version = ">=0.13.0"
-    required_providers {
-        google = {}
-    }
+provider "spotinst" {
+    token = var.spotinst_token
 }
 
-## Provider
-provider "google" {
-    project = var.project
+# Create account on Spot
+resource "spotinst_account" "spot_acct" {
+    name=local.name
 }
 
-## Local
-locals {
-    cmd = "${path.module}/scripts/spot-account"
-    account_id = data.external.account.result["account_id"]
-}
-
-# Create a random string
-resource "random_id" "role" {
-    byte_length = 8
-}
-
-## Resources
+# Allows management of a customized Cloud IAM project role.
 resource "google_project_iam_custom_role" "SpotRole" {
-  role_id     = "SpotRole${random_id.role.hex}"
-  title       = "SpotRole${random_id.role.hex}"
-  description = "Custom Role for Spot.io"
-  permissions = ["compute.addresses.create", "compute.addresses.createInternal", "compute.addresses.delete", "compute.addresses.get", "compute.addresses.list", "compute.addresses.setLabels", "compute.addresses.useInternal", "compute.backendServices.get", "compute.backendServices.list", "compute.backendServices.update", "compute.diskTypes.get", "compute.diskTypes.list", "compute.disks.create", "compute.disks.createSnapshot", "compute.disks.delete", "compute.disks.get", "compute.disks.list", "compute.disks.update", "compute.disks.use", "compute.globalOperations.get", "compute.globalOperations.list", "compute.healthChecks.useReadOnly", "compute.httpHealthChecks.useReadOnly", "compute.httpsHealthChecks.useReadOnly", "compute.images.create", "compute.images.delete", "compute.images.get", "compute.images.list", "compute.images.useReadOnly", "compute.instanceGroupManagers.get", "compute.instanceGroups.create", "compute.instanceGroups.get", "compute.instanceGroups.list", "compute.instanceGroups.update", "compute.instanceGroups.use", "compute.instanceTemplates.get", "compute.instances.attachDisk", "compute.instances.create", "compute.instances.delete", "compute.instances.get", "compute.instances.list", "compute.instances.listReferrers", "compute.instances.setLabels", "compute.instances.setMetadata", "compute.instances.setServiceAccount", "compute.instances.setTags", "compute.instances.start", "compute.instances.stop", "compute.instances.use", "compute.instances.update", "compute.instances.setDiskAutoDelete", "compute.machineTypes.get", "compute.machineTypes.list", "compute.networks.get", "compute.networks.list", "compute.projects.get", "compute.regionBackendServices.get", "compute.regionBackendServices.list", "compute.regionBackendServices.update", "compute.regionOperations.get", "compute.regionOperations.list", "compute.snapshots.create", "compute.snapshots.delete", "compute.snapshots.get", "compute.snapshots.list", "compute.subnetworks.use", "compute.subnetworks.useExternalIp", "compute.targetPools.addInstance", "compute.targetPools.get", "compute.targetPools.list", "compute.targetPools.removeInstance", "compute.zoneOperations.get", "compute.zoneOperations.list", "compute.zones.list", "container.clusterRoleBindings.create", "container.clusterRoles.bind", "container.clusters.get", "container.clusters.list", "container.clusters.update", "container.operations.get", "container.operations.list", "iam.serviceAccounts.get", "iam.serviceAccounts.list", "iam.serviceAccounts.update", "monitoring.metricDescriptors.list", "monitoring.timeSeries.list", "servicemanagement.services.check", "servicemanagement.services.report"]
+    role_id     = var.role_id == null ? "SpotRole${replace(spotinst_account.spot_acct.id, "-", "")}" : var.role_id
+    title       = var.role_title == null ? "SpotRole${replace(spotinst_account.spot_acct.id, "-", "")}" : var.role_title
+    description = var.role_description
+    project     = var.project
+    permissions = var.role_permissions
 }
 
+# Allows management of a Google Cloud service account.
 resource "google_service_account" "spotserviceaccount" {
-	provisioner "local-exec" {
-	    # Without this set-cloud-credentials fails 
-	    command = "sleep 10"
-	}
-	account_id   = "spot-${random_id.role.hex}"
-	display_name = "spot-${random_id.role.hex}"
-	description = "Service Account for Spot.io"
-	project = var.project
+    depends_on = [spotinst_account.spot_acct]
+    provisioner "local-exec" {
+        # Without this set-cloud-credentials fails
+        command = "sleep 10"
+    }
+    account_id   = var.service_account_id == null ? "spot-${var.spot_organization_id}-${spotinst_account.spot_acct.id}" : var.service_account_id
+    display_name = var.service_account_display_name == null ? "spot-${var.spot_organization_id}-${spotinst_account.spot_acct.id}" : var.service_account_display_name
+
+    description  = var.service_account_description
+    project      = var.project
 }
 
+# Creates and manages service account keys, which allow the use of a service account with Google Cloud.
 resource "google_service_account_key" "key" {
-  service_account_id = google_service_account.spotserviceaccount.name
+    service_account_id = google_service_account.spotserviceaccount.name
 }
 
+# Authoritative for a given role. Updates the IAM policy to grant a role to a list of members. Other roles within the IAM policy for the project are preserved.
 resource "google_project_iam_binding" "spot-account-iam" {
     project = var.project
-    role = google_project_iam_custom_role.SpotRole.name
+    role    = google_project_iam_custom_role.SpotRole.name
     members = [
-        "serviceAccount:spot-${random_id.role.hex}@${var.project}.iam.gserviceaccount.com",
+        google_service_account.spotserviceaccount.member
     ]
 }
 
-# Call Spot API to create the Spot Account 
-resource "null_resource" "account" {
-    triggers = {
-        cmd = "${path.module}/scripts/spot-account"
-        name = var.project
-    }
-    provisioner "local-exec" {
-        interpreter = ["/bin/bash", "-c"]
-        command = "${self.triggers.cmd} create ${self.triggers.name}"
-    }
-    provisioner "local-exec" {
-        when = destroy
-        interpreter = ["/bin/bash", "-c"]
-        command = <<-EOT
-            ID=$(${self.triggers.cmd} get --filter=name=${self.triggers.name} --attr=account_id) &&\
-            ${self.triggers.cmd} delete "$ID"
-        EOT
-    }
-}
-
-# Retrieve the Spot Account ID Information
-data "external" "account" {
-    depends_on = [null_resource.account]
-    program = [
-        local.cmd,
-        "get",
-        "--filter=name=${var.project}"
+# Authoritative for a given role. Updates the IAM policy to grant a role to a list of members. Other roles within the IAM policy for the project are preserved.
+resource "google_project_iam_binding" "service-account-user-iam" {
+    project = var.project
+    role    = "roles/iam.serviceAccountUser"
+    members = [
+        google_service_account.spotserviceaccount.member
     ]
 }
-
-# Link the service account to the Spot Account
-resource "null_resource" "account_association" {
-    depends_on = [google_project_iam_binding.spot-account-iam]
+# Link a Spot account to a GCP Cloud account.
+resource "spotinst_credentials_gcp" "gcp_connect" {
     provisioner "local-exec" {
-        interpreter = ["/bin/bash", "-c"]
-        command = "${local.cmd} set-cloud-credentials ${local.account_id} ${google_service_account_key.key.private_key}"
-    } 
+        # Without this set-cloud-credentials fails
+        command = "sleep 10"
+    }
+    account_id = spotinst_account.spot_acct.id
+    type = "service_account"
+    project_id = jsondecode(base64decode(google_service_account_key.key.private_key))["project_id"]
+    private_key_id = jsondecode(base64decode(google_service_account_key.key.private_key))["private_key_id"]
+    private_key = jsondecode(base64decode(google_service_account_key.key.private_key))["private_key"]
+    client_email = jsondecode(base64decode(google_service_account_key.key.private_key))["client_email"]
+    client_id = jsondecode(base64decode(google_service_account_key.key.private_key))["client_id"]
+    auth_uri = jsondecode(base64decode(google_service_account_key.key.private_key))["auth_uri"]
+    token_uri = jsondecode(base64decode(google_service_account_key.key.private_key))["token_uri"]
+    auth_provider_x509_cert_url = jsondecode(base64decode(google_service_account_key.key.private_key))["auth_provider_x509_cert_url"]
+    client_x509_cert_url = jsondecode(base64decode(google_service_account_key.key.private_key))["client_x509_cert_url"]
+
+    lifecycle {
+        ignore_changes = [
+            private_key,
+            account_id
+        ]
+    }
+
 }
