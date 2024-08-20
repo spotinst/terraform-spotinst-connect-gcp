@@ -48,9 +48,7 @@ resource "google_project_iam_binding" "spot-account-iam" {
 resource "google_project_iam_member" "service-account-user-iam" {
     project = var.project
     role    = "roles/iam.serviceAccountUser"
-    members = [
-        google_service_account.spotserviceaccount.member
-    ]
+    member  = google_service_account.spotserviceaccount.member
 }
 # Link a Spot account to a GCP Cloud account.
 resource "spotinst_credentials_gcp" "gcp_connect" {
