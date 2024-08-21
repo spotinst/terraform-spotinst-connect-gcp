@@ -44,7 +44,7 @@ resource "google_project_iam_binding" "spot-account-iam" {
     ]
 }
 
-# Authoritative for a given role. Updates the IAM policy to grant a role to a list of members. Other roles within the IAM policy for the project are preserved.
+# Non-authoritative. Updates the IAM policy to grant a role to a new member. Other members for the role for the project are preserved.
 resource "google_project_iam_member" "service-account-user-iam" {
     project = var.project
     role    = "roles/iam.serviceAccountUser"
