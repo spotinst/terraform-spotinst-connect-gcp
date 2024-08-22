@@ -1,7 +1,11 @@
 # Terraform GCP Examples for Spot.io
 
 ## Introduction
-The module will aid in automatically connecting your GCP project to Spot account via terraform.
+The module will automatically connect your GCP project to the Spot account via Terraform.
+
+# This module is an improved version of the previously available https://github.com/spotinst/terraform-spotinst-gcp-connect module, but it is not backward compatible. It should only be used to onboard new GCP projects to Spot.
+
+# Note - Do not upgrade to this module if you have previously onboarded a GCP project to spot using the 'terraform-spotinst-gcp-connect' module.
 
 ### Pre-Reqs
 * Spot Organization Admin API token.
