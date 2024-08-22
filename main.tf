@@ -51,7 +51,7 @@ resource "google_project_iam_member" "service-account-user-iam" {
     member  = google_service_account.spotserviceaccount.member
 }
 # Link a Spot account to a GCP Cloud account.
-resource "spotinst_credentials_gcp" "gcp_connect" {
+resource "spotinst_credentials_gcp" "connect_gcp" {
     provisioner "local-exec" {
         # Without this set-cloud-credentials fails
         command = "sleep 10"
