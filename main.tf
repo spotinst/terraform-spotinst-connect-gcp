@@ -52,10 +52,10 @@ resource "google_project_iam_member" "service-account-user-iam" {
 }
 # Link a Spot account to a GCP Cloud account.
 resource "spotinst_credentials_gcp" "connect_gcp" {
-    provisioner "local-exec" {
-        # Without this set-cloud-credentials fails
-        command = "sleep 10"
-    }
+#     provisioner "local-exec" {
+#         # Without this set-cloud-credentials fails
+#         command = "sleep 10"
+#     }
     account_id = spotinst_account.spot_acct.id
     type = "service_account"
     project_id = jsondecode(base64decode(google_service_account_key.key.private_key))["project_id"]
